@@ -1,0 +1,89 @@
+-- Desafio básico
+
+-- BASE
+
+CREATE TABLE categorias (
+    id_categoria INT PRIMARY KEY,
+    nome_categoria VARCHAR(50)
+);
+
+CREATE TABLE produtos (
+    id_produto INT PRIMARY KEY,
+    nome_produto VARCHAR(100),
+    preco DECIMAL(10,2),
+    id_categoria INT,
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria)
+);
+
+CREATE TABLE clientes (
+    id_cliente INT PRIMARY KEY,
+    nome VARCHAR(100),
+    email VARCHAR(100),
+    cidade VARCHAR(50)
+);
+
+CREATE TABLE pedidos (
+    id_pedido INT PRIMARY KEY,
+    id_cliente INT,
+    id_produto INT,
+    quantidade INT,
+    data_pedido DATE,
+    FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente),
+    FOREIGN KEY (id_produto) REFERENCES produtos(id_produto)
+);
+
+-- Inserindo dados de teste
+INSERT INTO categorias VALUES (1, 'Eletrônicos'), (2, 'Livros'), (3, 'Vestuário');
+INSERT INTO produtos VALUES (101, 'Smartphone', 1500.00, 1), (102, 'Notebook', 3500.00, 1), (103, 'Curso de SQL', 90.00, 2), (104, 'Camiseta Geek', 59.90, 3);
+INSERT INTO clientes VALUES (1, 'Carlos Silva', 'carlos@email.com', 'São Paulo'), (2, 'Ana Souza', NULL, 'Rio de Janeiro'), (3, 'Bruno Lima', 'bruno@email.com', 'São Paulo'), (4, 'Mariana Costa', 'mari@email.com', 'Belo Horizonte');
+INSERT INTO pedidos VALUES (501, 1, 101, 1, '2026-01-10'), (502, 1, 104, 2, '2026-01-12'), (503, 2, 102, 1, '2026-01-15'), (504, 3, 103, 1, '2026-01-20'), (505, 4, 104, 1, '2026-01-22');
+
+--Desafio 1: [Filtro Simples] Liste o nome e o email de todos os clientes que moram em 'São Paulo'.
+
+Desafio 2: [Tratamento de Nulos] O setor de marketing precisa disparar uma campanha. Liste o nome de todos os clientes que não possuem e-mail cadastrado (ou seja, onde o campo está NULL).
+
+Desafio 3: [Ordenação e Limite] Liste o nome_produto e o preco dos 2 produtos mais caros da loja.
+
+Desafio 4: [O Novo Amor: INNER JOIN] Junte as tabelas pedidos e produtos para listar o id_pedido, o nome_produto e a quantidade de itens de cada pedido.
+
+Desafio 5: [Agrupamento + JOIN] Junte as tabelas pedidos e produtos. Calcule o faturamento total por produto.
+
+Dica: Você precisará multiplicar quantidade * preco dentro da função SUM(), e agrupar pelo nome do produto.
+
+Desafio 6: [O Desafio Master - Triplo JOIN + HAVING] Junte três tabelas: clientes, pedidos e produtos. Traga o nome do cliente e a soma do valor total que ele gastou na loja (SUM(quantidade * preco)). Filtre para mostrar apenas os clientes que gastaram mais de 1000 reais no total.
+--
+
+---Resolução: 
+
+-- Desafio 1--
+Select nome, email from clientes
+WHERE cidade = 'São Paulo';
+
+-- Desafio 2
+SELECT nome, email FROM clientes
+WHERE email IS NULL;
+
+-- Desafio 3 --
+SELECT nome_produto, preco FROM produtos
+ORDER BY preco DESC
+LIMIT 2;
+
+-- desafio 4 --
+SELECT id_pedido, nome_produto, quantidade
+FROM pedidos
+INNER JOIN produtos ON produtos.id_produto = pedidos.id_produto;
+
+-- desafio 5--
+SELECT nome_produto, SUM(quantidade * preco)
+FROM produtos
+INNER JOIN pedidos ON pedidos.id_produto = produtos.id_produto
+GROUP BY nome_produto;
+
+-- desafio 6--
+SELECT nome, SUM(quantidade * preco) AS gasto_total
+FROM clientes
+INNER JOIN pedidos ON pedidos.id_cliente = clientes.id_cliente
+INNER JOIN produtos on produtos.id_produto = pedidos.id_produto
+HAVING gasto_total > 1000;
+
+
