@@ -1,0 +1,99 @@
+
+--Estrutura--
+CREATE TABLE usuarios (
+    id_usuario INT PRIMARY KEY,
+    nome_usuario VARCHAR(100),
+    pais VARCHAR(50)
+);
+
+CREATE TABLE assinaturas (
+    id_assinatura INT PRIMARY KEY,
+    plano VARCHAR(50),
+    valor_mensal DECIMAL(5,2),
+    id_usuario INT,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+);
+
+CREATE TABLE historico_visualizacao (
+    id_acesso INT PRIMARY KEY,
+    id_usuario INT,
+    tipo_conteudo VARCHAR(50), -- 'Filme' ou 'Serie'
+    minutos_assistidos INT,
+    data_acesso DATE,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+);
+
+-- Inserindo 20 Usuários
+INSERT INTO usuarios VALUES 
+(1, 'Ana Silva', 'Brasil'), (2, 'Bruno Souza', 'Brasil'), (3, 'Carlos Lima', 'Portugal'), 
+(4, 'Daniela Reis', 'Brasil'), (5, 'Eduardo Costa', 'Angola'), (6, 'Fernanda Dias', 'Brasil'), 
+(7, 'Gabriel Jesus', 'Portugal'), (8, 'Helena Roza', 'Brasil'), (9, 'Igor Gomes', 'Angola'), 
+(10, 'Julia Lopes', 'Brasil'), (11, 'Kevin Castro', 'Moçambique'), (12, 'Larissa Melo', 'Brasil'), 
+(13, 'Maurício Vaz', 'Portugal'), (14, 'Natália Faria', 'Brasil'), (15, 'Otávio Luiz', 'Brasil'), 
+(16, 'Patrícia Sol', 'Cabo Verde'), (17, 'Quintino Neto', 'Brasil'), (18, 'Rafaela Paz', 'Portugal'), 
+(19, 'Samuel Antunes', 'Brasil'), (20, 'Tatiana Cruz', 'Brasil');
+
+-- Inserindo Assinaturas (Note que alguns usuários não têm assinatura ativa, ex: 4, 8, 12, 16, 20)
+INSERT INTO assinaturas VALUES 
+(101, 'Plano Básico', 22.90, 1), (102, 'Plano Premium', 55.90, 2), (103, 'Plano Padrão', 39.90, 3),
+(105, 'Plano Premium', 55.90, 5), (106, 'Plano Básico', 22.90, 6), (107, 'Plano Padrão', 39.90, 7),
+(109, 'Plano Básico', 22.90, 9), (110, 'Plano Premium', 55.90, 10), (111, 'Plano Padrão', 39.90, 11),
+(113, 'Plano Premium', 55.90, 13), (114, 'Plano Básico', 22.90, 14), (115, 'Plano Padrão', 39.90, 15),
+(117, 'Plano Premium', 55.90, 17), (118, 'Plano Básico', 22.90, 18), (119, 'Plano Padrão', 39.90, 19);
+
+-- Inserindo Histórico de Visualização (Mais de 20 registros de acessos)
+INSERT INTO historico_visualizacao VALUES 
+(1001, 1, 'Filme', 120, '2026-06-01'), (1002, 1, 'Serie', 45, '2026-06-02'),
+(1003, 2, 'Filme', 150, '2026-06-01'), (1004, 3, 'Serie', 50, '2026-06-03'),
+(1005, 5, 'Filme', 90, '2026-06-04'),  (1006, 6, 'Filme', 110, '2026-06-02'),
+(1007, 7, 'Serie', 40, '2026-06-05'),  (1008, 9, 'Serie', 55, '2026-06-01'),
+(1009, 10, 'Filme', 180, '2026-06-06'), (1010, 11, 'Filme', 85, '2026-06-02'),
+(1011, 13, 'Serie', 60, '2026-06-07'), (1012, 14, 'Filme', 105, '2026-06-03'),
+(1013, 15, 'Serie', 45, '2026-06-04'), (1014, 17, 'Filme', 130, '2026-06-08'),
+(1015, 18, 'Serie', 50, '2026-06-05'), (1016, 19, 'Filme', 95, '2026-06-09'),
+(1017, 1, 'Serie', 42, '2026-06-10'),  (1018, 2, 'Serie', 48, '2026-06-11'),
+(1019, 10, 'Serie', 52, '2026-06-12'), (1020, 13, 'Filme', 140, '2026-06-13'),
+(1021, 6, 'Serie', 45, '2026-06-14'),  (1022, 15, 'Filme', 115, '2026-06-15');
+
+O Briefing do Projeto: Relatório de Engajamento e Receita
+Você precisa criar uma View chamada vw_dashboard_streaming que junte os dados dessas tabelas e entregue um relatório estratégico contendo exatamente as seguintes colunas:
+
+nome_usuario: Nome do usuário.
+
+plano_atual: Use COALESCE para exibir o nome do plano da assinatura. Se o usuário não tiver assinatura ativa, exiba 'Inativo/Sem Plano'.
+
+classificacao_faturamento: Use um CASE WHEN baseado na coluna valor_mensal da assinatura:
+
+Maior que 50 ➡️ 'Cliente Alto Valor'
+
+Maior que 30 ➡️ 'Cliente Médio Valor'
+
+Maior que 0 ➡️ 'Cliente Baixo Valor'
+
+Qualquer outro caso (Nulo) ➡️ 'Sem Faturamento'
+
+tipo_conteudo e minutos_assistidos: Colunas diretas vindas do histórico.
+
+ranking_consumo_por_pais: Use uma Window Function (ROW_NUMBER) para criar um ranking dos usuários baseado nos minutos_assistidos de forma decrescente (do maior tempo para o menor). Mas atenção: esse ranking deve resetar para cada pais do usuário (PARTITION BY).
+
+Regra Crucial de Filtro (Subquery):
+O relatório NÃO deve mostrar dados de usuários que pertençam a países que não possuem faturamento. Ou seja, no WHERE da query principal, filtre para que o pais do usuário esteja IN em uma subquery que traga apenas os países dos usuários que possuem alguma assinatura ativa.
+
+--Projeto Escrito--
+CREATE VIEW vw_dashboard_streaming AS 
+	SELECT nome_usuario, COALESCE(plano, 'Inativo/Sem plano') AS Plano_Atual,
+    CASE
+    WHEN valor_mensal > 50 THEN 'Cliente Alto Valor'
+    WHEN valor_mensal > 30 THEN 'Cliente Médio Valor'
+    WHEN valor_mensal > 0 THEN 'Cliente baixo valor'
+    ELSE 'Sem Faturamento'
+    END AS Classificacao_faturamento,
+    tipo_conteudo, minutos_assistidos,
+    ROW_NUMBER() OVER(PARTITION BY pais ORDER BY minutos_assistidos DESC) AS Ranking_Consumo_por_pais
+  FROM usuarios
+  LEFT JOIN assinaturas ON assinaturas.id_usuario = usuarios.id_usuario
+  LEFT JOIN historico_visualizacao ON historico_visualizacao.id_usuario = usuarios.id_usuario
+  WHERE pais IN (SELECT pais FROM usuarios JOIN assinaturas ON assinaturas.id_usuario = usuarios.id_usuario);
+ 
+
+ SELECT * FROM vw_dashboard_streaming;
