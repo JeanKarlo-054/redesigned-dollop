@@ -1,0 +1,100 @@
+Desafio : Entrevista técnica: 
+
+O Cenário da Entrevista: SoundFlow Inc.
+O recrutador do SoundFlow te dá o seguinte problema:
+
+"Nossa equipe de marketing quer criar uma campanha para usuários que gostam de ouvir música no celular. Precisamos de um relatório que analise o comportamento desses usuários e classifique o tempo que eles passam ouvindo música por dia, mas apenas para os estilos musicais que realmente têm relevância na plataforma."
+
+Aqui está o script para você rodar e criar as tabelas no seu SQLonline:
+CREATE TABLE artistas (
+    id_artista INT PRIMARY KEY,
+    nome_artista VARCHAR(100),
+    estilo_musical VARCHAR(50) -- 'Rock', 'Pop', 'Sertanejo', etc.
+);
+
+CREATE TABLE historico_escuta (
+    id_escuta INT PRIMARY KEY,
+    id_artista INT,
+    minutos_ouvidos INT,
+    dispositivo_usado VARCHAR(50), -- 'Celular', 'Computador'
+    FOREIGN KEY (id_artista) REFERENCES artistas(id_artista)
+);
+
+-- Inserindo Artistas
+INSERT INTO artistas VALUES 
+(1, 'The Black Keys', 'Rock'), (2, 'Dua Lipa', 'Pop'),
+(3, 'Marília Mendonça', 'Sertanejo'), (4, 'Linkin Park', 'Rock'),
+(5, 'Anitta', 'Pop'), (6, 'Alok', 'Eletrônica'),
+(7, 'Jorge & Mateus', 'Sertanejo');
+
+-- Inserindo Histórico de Escuta
+INSERT INTO historico_escuta VALUES 
+(901, 1, 45, 'Celular'),    (902, 1, 15, 'Computador'),
+(903, 2, 120, 'Celular'),   (904, 3, NULL, 'Celular'), -- Ouvinte pausou ou deu erro
+(905, 4, 85, 'Celular'),    (906, 5, 10, 'Computador'),
+(907, 6, 200, 'Computador'),(908, 7, 65, 'Celular'),
+(909, 4, 30, 'Celular');
+
+Desafio para Gabaritar: Relatório de Engajamento Mobile
+Escreva uma consulta SQL por extenso (usando os nomes artistas e historico_escuta antes das colunas) que retorne:
+
+nome_artista: Nome do artista.
+
+estilo_musical: Estilo musical do artista.
+
+classificacao_escuta: Um CASE WHEN baseado na coluna historico_escuta.minutos_ouvidos:
+
+Maior que 60 minutos ➡️ 'Ouvinte Fanático'
+
+Maior que 30 minutos ➡️ 'Ouvinte Moderado'
+
+Maior que 0 minutos ➡️ 'Ouvinte Casual'
+
+Qualquer outro caso (como nulos) ➡️ 'Não Escutado Hoje'
+
+tempo_total_minutos: Use COALESCE na coluna historico_escuta.minutos_ouvidos. Se for nulo, exiba 0.
+
+ranking_popularidade_estilo: Uma Window Function (ROW_NUMBER) que crie um ranking dos registros mais ouvidos (maior tempo de escuta primeiro, ou seja, DESC) agrupado (PARTITION BY) por artistas.estilo_musical.
+
+🚨 A Regra do Filtro (WHERE com Subquery):
+O marketing só quer analisar artistas cujo estilo musical pertença a estilos que já tiveram pelo menos uma música ouvida no 'Celular' por mais de 40 minutos.
+
+No seu WHERE, filtre para que: artistas.estilo_musical IN ( ... )
+
+Dentro do parênteses da subquery, faça um SELECT do estilo musical, juntando artistas e historico_escuta, onde o historico_escuta.dispositivo_usado = 'Celular' AND historico_escuta.minutos_ouvidos > 40.
+
+🔗 Relação das Tabelas:
+Comece o FROM com a tabela artistas e use LEFT JOIN com historico_escuta.
+
+⚠️ Lembretes para o 10/10:
+
+Sem o sinal de = antes do CASE.
+
+Coloque o nome da tabela por extenso antes de todas as colunas (artistas.estilo_musical, historico_escuta.minutos_ouvidos, etc.).
+
+Cuidado para não duplicar colunas.
+
+O filtro do AND fica dentro dos parênteses da subquery.
+
+A caneta está na sua mão. Mostra para esse recrutador como é que se faz! 🚀💻
+
+---Resposta
+SELECT nome_artista, estilo_musical,
+	CASE	
+    WHEN historico_escuta.minutos_ouvidos > 60 THEN 'ouvinte fanático'
+    WHEN historico_escuta.minutos_ouvidos > 30 THEN 'ouvinte moderado'
+    WHEN historico_escuta.minutos_ouvidos > 0 THEN 'Não escutado hoje'
+    ELSE 'Ouvinte Casual'
+    END AS classificacao_escuta,
+    COALESCE(historico_escuta.minutos_ouvidos, 0) AS tempo_total_minutos,
+    ROW_NUMBER() OVER(PARTITION BY artistas.estilo_musical ORDER BY historico_escuta.minutos_ouvidos DESC) AS
+    ranking_popularidade_estilo
+FROM artistas
+LEFT JOIN historico_escuta ON historico_escuta.id_artista = artistas.id_artista
+WHERE artistas.estilo_musical IN(
+  SELECT estilo_musical
+  FROM artistas
+  Left join historico_escuta ON historico_escuta.id_artista = artistas.id_artista
+  WHERE historico_escuta.dispositivo_usado = 'Celular' AND historico_escuta.minutos_ouvidos > 40);
+    
+    
