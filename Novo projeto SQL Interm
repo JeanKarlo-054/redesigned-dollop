@@ -1,0 +1,90 @@
+NOVO PROJETO. 
+
+CREATE TABLE clientes (
+    id_cliente INT PRIMARY KEY,
+    nome_cliente VARCHAR(100),
+    estado_entrega VARCHAR(2) -- 'SP', 'RJ', 'MG', etc.
+);
+
+CREATE TABLE pedidos (
+    id_pedido INT PRIMARY KEY,
+    valor_total DECIMAL(10,2),
+    id_cliente INT,
+    FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
+);
+
+CREATE TABLE suporte_tickets (
+    id_ticket INT PRIMARY KEY,
+    id_cliente INT,
+    tipo_reclamacao VARCHAR(50), -- 'Atraso', 'Defeito'
+    dias_para_resolver INT,
+    FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
+);
+
+-- Inserindo Clientes
+INSERT INTO clientes VALUES 
+(1, 'Alice Silva', 'SP'), (2, 'Bruno Melo', 'RJ'), (3, 'Carla Dias', 'MG'), 
+(4, 'Diego Rios', 'SP'), (5, 'Elena Cruz', 'PR'), (6, 'Fábio Lima', 'SP'), 
+(7, 'Gisele Vaz', 'RJ'), (8, 'Heitor Paz', 'MG'), (9, 'Igor Souza', 'SC'), 
+(10, 'Julia Rosa', 'SP');
+
+-- Inserindo Pedidos (Alguns clientes não compraram nada ainda, ex: 4, 8, 10)
+INSERT INTO pedidos VALUES 
+(101, 1500.00, 1), (102, 350.00, 2), (103, 80.00, 3),
+(104, 2500.00, 5), (105, 120.00, 6), (106, 600.00, 7), (107, 45.00, 9);
+
+-- Inserindo Tickets de Suporte
+INSERT INTO suporte_tickets VALUES 
+(501, 1, 'Atraso', 5), (502, 2, 'Defeito', 12), (503, 3, 'Atraso', 2),
+(504, 5, 'Defeito', 15), (505, 6, 'Atraso', 1), (506, 7, 'Defeito', 8),
+(507, 1, 'Defeito', 4), (508, 2, 'Atraso', 3);
+
+
+-----ENUNCIADO
+Vamos retomar com a mente fresca, e lembre-se da nossa estratégia para hoje: vamos usar os nomes das tabelas 100% por extenso (sem aquelas letras de atalho para não dar nó na cabeça).
+
+Para refrescar a memória antes de você começar a digitar, aqui está o resumo do que o diretor do E-commerce pediu para o relatório (vw_analise_suporte):
+
+clientes.nome_cliente
+
+COALESCE no pedidos.valor_total (se for nulo, exiba 0.00)
+
+CASE WHEN para os suporte_tickets.dias_para_resolver:
+
+Maior que 10 ➡️ 'Resolução Lenta'
+
+Maior que 3 ➡️ 'Resolução Média'
+
+Maior que 0 ➡️ 'Resolução Rápida'
+
+Senão ➡️ 'Sem Chamados'
+
+suporte_tickets.tipo_reclamacao
+
+ROW_NUMBER() ordenando por suporte_tickets.dias_para_resolver DESC e resetando (PARTITION BY) por clientes.estado_entrega.
+
+O filtro do IN: Apenas estados (clientes.estado_entrega) que aparecem na subquery que junta clientes e pedidos.
+
+
+---Query Resposta
+
+CREATE VIEW vw_analise_suporte AS
+	SELECT clientes.nome_cliente, COALESCE(pedidos.valor_total, '0.00'),
+    CASE
+    WHEN suporte_tickets.dias_para_resolver > 10 THEN 'Resolucao Lenta'
+    When suporte_tickets.dias_para_resolver > 3 THEN 'Resolucao Média'
+    WHEN suporte_tickets.dias_para_resolver > 0 THEN 'Resolucao Rápida'
+    ELSE 'Sem Chamados'
+    End AS Categoria_ticket,
+    suporte_tickets.tipo_reclamacao,
+    	ROW_NUMBER() OVER(PARTITION BY clientes.estado_entrega ORDER BY suporte_tickets.dias_para_resolver DESC)
+        AS Ranking_tempo_por_estado
+        FROM clientes
+ Left JOIN pedidos ON pedidos.id_cliente = clientes.id_cliente
+ LEFT JOIN suporte_tickets ON suporte_tickets.id_cliente = clientes.id_cliente
+ WHERE clientes.estado_entrega IN (	
+   SELECT clientes.estado_entrega
+   FROM clientes	
+   JOIN pedidos on pedidos.id_cliente = clientes.id_cliente);
+   
+   SELECT * FROM vw_analise_suporte;
